@@ -1,5 +1,6 @@
 class LibraryItem:
-    def __init__(self, name, artist, rating=0, image="", audio=""):
+    def __init__(self, name, artist, rating=0, image="", audio="", track_number=""):
+        self.track_number = track_number
         self.name = name
         self.artist = artist
         self.rating = rating

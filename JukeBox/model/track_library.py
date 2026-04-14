@@ -1,9 +1,9 @@
 import csv
 import os
-from library_item import LibraryItem
+from JukeBox.model.library_item import LibraryItem
 
 library = {}
-CSV_FILE = os.path.join(os.path.dirname(__file__), "tracks.csv")
+CSV_FILE = os.path.join(os.path.dirname(__file__), "../tracks.csv")
 
 
 def load_library():
@@ -22,7 +22,7 @@ def load_library():
                 image = row.get("image", "").strip()
                 audio = row.get("audio", "").strip()
 
-                item = LibraryItem(name, artist, rating, image, audio)
+                item = LibraryItem(name, artist, rating, image, audio, track_number)
                 item.play_count = play_count
                 library[track_number] = item
 
@@ -137,7 +137,7 @@ def get_image_path(key):
         if os.path.exists(image_path):
             return image_path
 
-    default_path = os.path.join(os.path.dirname(__file__), "img", "default.png")
+    default_path = os.path.join(os.path.dirname(__file__), "../img", "default.png")
     if os.path.exists(default_path):
         return default_path
 
@@ -159,9 +159,6 @@ def get_audio_path(key):
             return audio_path
 
     return None
-
-
-
 
 
 def search_tracks(keyword):

@@ -1,4 +1,4 @@
-from library_item import LibraryItem
+from JukeBox.model.library_item import LibraryItem
 
 
 def test_library_item_name():
