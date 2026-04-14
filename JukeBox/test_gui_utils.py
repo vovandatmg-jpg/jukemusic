@@ -1,4 +1,4 @@
-from JukeBox.view.gui_utils import normalise_track_number
+from view.gui_utils import normalise_track_number
 
 
 def test_normalise_track_number_empty():

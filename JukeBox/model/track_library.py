@@ -1,6 +1,6 @@
 import csv
 import os
-from JukeBox.model.library_item import LibraryItem
+from model.library_item import LibraryItem
 
 library = {}
 CSV_FILE = os.path.join(os.path.dirname(__file__), "../tracks.csv")

@@ -1,4 +1,4 @@
-from JukeBox.model.library_item import LibraryItem
+from model.library_item import LibraryItem
 
 
 class Playlist:

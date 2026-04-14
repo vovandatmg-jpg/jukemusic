@@ -1,9 +1,9 @@
 import tkinter as tk
-import font_manager as fonts
+from view import font_manager as fonts
 
 from controller.track_controller import TrackController, validate_rating
 
-from gui_utils import (
+from view.gui_utils import (
     BG, CARD, set_text,
     make_title, make_card, make_label, make_entry,
     make_button, make_text, make_status,

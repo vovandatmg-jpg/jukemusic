@@ -1,10 +1,10 @@
 import tkinter as tk
 import os
 
-import font_manager as fonts
+from view import font_manager as fonts
 from controller.main_controller import MainController
 
-from gui_utils import (
+from view.gui_utils import (
     BG, CARD,
     SUBTEXT, make_title,
     make_button, make_status,
@@ -39,7 +39,7 @@ def main():
     image_frame = tk.Frame(window, bg=CARD, bd=1, relief="solid")
     image_frame.pack(pady=(0, 14))
 
-    image_path = os.path.join(os.path.dirname(__file__), "../img", "anhnen.png")
+    image_path = os.path.join(os.path.dirname(__file__), "..", "img", "anhnen.png")
 
     if os.path.exists(image_path):
         try:

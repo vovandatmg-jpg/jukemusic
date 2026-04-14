@@ -1,9 +1,9 @@
 import tkinter as tk
-import font_manager as fonts
+from view import font_manager as fonts
 
 from controller.playlist_controller import PlaylistController
 
-from gui_utils import (
+from view.gui_utils import (
     BG, CARD, SECONDARY,
     set_text,
     make_title, make_card, make_label, make_entry,

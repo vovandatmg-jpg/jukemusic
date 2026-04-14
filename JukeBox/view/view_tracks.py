@@ -7,10 +7,10 @@ try:
 except ImportError:
     pygame = None
 
-import font_manager as fonts
+from view import font_manager as fonts
 from controller.track_controller import TrackController
 
-from gui_utils import (
+from view.gui_utils import (
     BG, CARD, TEXT, SECONDARY,
     set_text,
     make_title, make_card,

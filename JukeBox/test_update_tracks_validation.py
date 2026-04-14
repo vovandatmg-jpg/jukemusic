@@ -1,4 +1,4 @@
-from JukeBox.view.update_tracks import validate_rating
+from controller.track_controller import validate_rating
 
 
 def test_validate_rating_empty():
