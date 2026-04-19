@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 
 BG = "#FFF4EE"
@@ -12,24 +13,9 @@ ERROR = "#B14A3D"
 
 def set_text(text_area, content):
     text_area.config(state="normal")
-
     text_area.delete("1.0", tk.END)
     text_area.insert("1.0", content)
-
     text_area.config(state="disabled")
-
-
-def normalise_track_number(track_number):
-    track_number = track_number.strip()
-
-    if track_number == "":
-        return None, "Please enter a track number"
-    if not track_number.isdigit():
-        return None, "Track number must be numeric"
-    if len(track_number) > 2:
-        return None, "Track number must be 1 or 2 digits"
-
-    return track_number.zfill(2), None
 
 
 def make_title(parent, text):
@@ -80,9 +66,9 @@ def make_text(parent, width=60, height=10):
         fg=TEXT,
         relief="solid",
         bd=1,
-        wrap="word"
+        wrap="word",
+        insertbackground=TEXT
     )
-
     text_area.config(state="disabled")
     return text_area
 
@@ -99,7 +85,6 @@ def make_status(parent):
     return lbl
 
 
-
 def set_status(label, text, ok=None):
     if ok is True:
         color = SUCCESS
@@ -109,3 +94,60 @@ def set_status(label, text, ok=None):
         color = SUBTEXT
 
     label.configure(text=text, fg=color)
+
+
+def load_png_image(image_path, max_width=180, max_height=220):
+    if not image_path or not os.path.exists(image_path):
+        return None
+
+    try:
+        image = tk.PhotoImage(file=image_path)
+
+        width = image.width()
+        height = image.height()
+
+        scale_x = (width + max_width - 1) // max_width if width > max_width else 1
+        scale_y = (height + max_height - 1) // max_height if height > max_height else 1
+        scale = max(scale_x, scale_y)
+
+        if scale > 1:
+            image = image.subsample(scale, scale)
+
+        return image
+
+    except tk.TclError:
+        return None
+
+
+def clear_image_label(
+    label,
+    message="No image",
+    bg="white",
+    fg=TEXT,
+    font=("Segoe UI", 10, "italic")
+):
+    label.configure(
+        text=message,
+        image="",
+        bg=bg,
+        fg=fg,
+        font=font
+    )
+    label.image = None
+
+
+def set_image_label(label, photo, bg="white"):
+    label.configure(image=photo, text="", bg=bg)
+    label.image = photo
+
+
+def init_audio_system(pygame_module):
+    if pygame_module is None:
+        return False
+
+    try:
+        if pygame_module.mixer.get_init() is None:
+            pygame_module.mixer.init()
+        return True
+    except Exception:
+        return False

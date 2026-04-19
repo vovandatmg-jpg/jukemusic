@@ -1,4 +1,4 @@
-from controller.track_controller import validate_rating
+from controller.input_validator import validate_rating
 
 
 def test_validate_rating_empty():

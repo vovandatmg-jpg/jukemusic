@@ -1,7 +1,7 @@
 import tkinter as tk
 from view import font_manager as fonts
 
-from controller.track_controller import TrackController, validate_rating
+from controller.track_controller import TrackController
 
 from view.gui_utils import (
     BG, CARD, set_text,
@@ -14,9 +14,6 @@ from view.gui_utils import (
 class UpdateTracks:
     def __init__(self, window):
         self.window = window
-        self.window.geometry("760x500")
-        self.window.title("Update Track Rating")
-        self.window.configure(bg=BG)
 
         fonts.configure()
 

@@ -1,4 +1,4 @@
-from view.gui_utils import normalise_track_number
+from controller.input_validator import normalise_track_number
 
 
 def test_normalise_track_number_empty():

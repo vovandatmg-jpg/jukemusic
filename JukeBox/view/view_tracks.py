@@ -1,6 +1,5 @@
 import tkinter as tk
 import tkinter.scrolledtext as tkst
-import os
 
 try:
     import pygame
@@ -11,34 +10,26 @@ from view import font_manager as fonts
 from controller.track_controller import TrackController
 
 from view.gui_utils import (
-    BG, CARD, TEXT, SECONDARY,
+    CARD, TEXT, SECONDARY,
     set_text,
     make_title, make_card,
     make_label, make_entry,
     make_button, make_text,
-    make_status, set_status
+    make_status, set_status,
+    load_png_image, clear_image_label, set_image_label,
+    init_audio_system
 )
 
 
 class TrackViewer:
     def __init__(self, window):
         self.window = window
-        self.window.geometry("980x660")
-        self.window.title("View Tracks")
-        self.window.configure(bg=BG)
 
         fonts.configure()
 
         self.controller = TrackController()
         self.current_track = None
-
-        self.audio_ready = False
-        if pygame is not None:
-            try:
-                pygame.mixer.init()
-                self.audio_ready = True
-            except pygame.error:
-                self.audio_ready = False
+        self.audio_ready = init_audio_system(pygame)
 
         make_title(window, "View Tracks")
 
@@ -47,8 +38,12 @@ class TrackViewer:
         left_frame = tk.Frame(main_frame, bg=CARD)
         left_frame.pack(side="left", fill="both", expand=True, padx=20, pady=20)
 
-        right_frame = tk.Frame(main_frame, bg=CARD)
+        right_frame = tk.Frame(main_frame, bg=CARD, width=320)
         right_frame.pack(side="right", fill="y", padx=(0, 20), pady=20)
+        right_frame.pack_propagate(False)
+
+        details_panel = tk.Frame(right_frame, bg=CARD)
+        details_panel.pack(expand=True)
 
         top_controls = tk.Frame(left_frame, bg=CARD)
         top_controls.pack(anchor="w", pady=(0, 12))
@@ -118,7 +113,7 @@ class TrackViewer:
         self.list_txt.config(state="disabled")
 
         details_title = tk.Label(
-            right_frame,
+            details_panel,
             text="Track Details",
             bg=CARD,
             fg=TEXT,
@@ -126,7 +121,7 @@ class TrackViewer:
         )
         details_title.pack(pady=(5, 12))
 
-        image_frame = tk.Frame(right_frame, bg=CARD, bd=1, relief="solid")
+        image_frame = tk.Frame(details_panel, bg=CARD, bd=1, relief="solid")
         image_frame.pack(pady=(0, 10))
 
         self.image_lbl = tk.Label(
@@ -137,10 +132,10 @@ class TrackViewer:
         )
         self.image_lbl.pack(padx=6, pady=6)
 
-        self.track_txt = make_text(right_frame, 28, 10)
+        self.track_txt = make_text(details_panel, 28, 10)
         self.track_txt.pack()
 
-        audio_frame = tk.Frame(right_frame, bg=CARD)
+        audio_frame = tk.Frame(details_panel, bg=CARD)
         audio_frame.pack(pady=(10, 0))
 
         make_button(audio_frame, "Play", self.play_track_clicked, 10).grid(
@@ -152,36 +147,10 @@ class TrackViewer:
         )
 
         self.status_lbl = make_status(window)
-
         self.list_tracks_clicked()
 
-        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
-
-    def load_png_image(self, image_path, max_width=180, max_height=220):
-        if not image_path or not os.path.exists(image_path):
-            return None
-
-        try:
-            image = tk.PhotoImage(file=image_path)
-
-            width = image.width()
-            height = image.height()
-
-            scale_x = (width + max_width - 1) // max_width if width > max_width else 1
-            scale_y = (height + max_height - 1) // max_height if height > max_height else 1
-            scale = max(scale_x, scale_y)
-
-            if scale > 1:
-                image = image.subsample(scale, scale)
-
-            return image
-
-        except tk.TclError:
-            return None
-
     def clear_image(self, message="No image"):
-        self.image_lbl.configure(text=message, image="", bg="white")
-        self.image_lbl.image = None
+        clear_image_label(self.image_lbl, message=message, bg="white", fg=TEXT)
 
     def clear_track_details(self):
         set_text(self.track_txt, "")
@@ -189,18 +158,13 @@ class TrackViewer:
         self.current_track = None
 
     def show_track_image(self, image_path):
-        photo = self.load_png_image(image_path)
+        photo = load_png_image(image_path, max_width=180, max_height=220)
 
         if photo is None:
             self.clear_image("No image available")
             return
 
-        self.image_lbl.configure(image=photo, text="", bg="white")
-        self.image_lbl.image = photo
-
-    def update_track_details(self, track_number):
-        details = self.controller.get_track_details_text(track_number)
-        set_text(self.track_txt, details)
+        set_image_label(self.image_lbl, photo, bg="white")
 
     def view_tracks_clicked(self):
         result = self.controller.view_track(self.input_txt.get())
@@ -238,7 +202,7 @@ class TrackViewer:
             pygame.mixer.music.load(audio_path)
             pygame.mixer.music.play()
 
-            details = self.controller.register_play(self.current_track)
+            details = self.controller.register_play(self.current_track, save=True)
             set_text(self.track_txt, details)
 
             set_status(self.status_lbl, "Playing track", ok=True)
@@ -276,11 +240,8 @@ class TrackViewer:
         set_status(self.status_lbl, result["status"], ok=result["ok"])
 
     def on_close(self):
-        if pygame is not None and self.audio_ready:
+        if pygame is not None and self.audio_ready and pygame.mixer.get_init() is not None:
             pygame.mixer.music.stop()
-            pygame.mixer.quit()
-
-        self.window.destroy()
 
 
 if __name__ == "__main__":

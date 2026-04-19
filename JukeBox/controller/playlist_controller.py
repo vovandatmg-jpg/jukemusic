@@ -1,11 +1,14 @@
 import model.track_library as lib
 from model.playlist import Playlist
-from view.gui_utils import normalise_track_number
+from controller.input_validator import normalise_track_number
 
 
 class PlaylistController:
     def __init__(self):
         self.playlist = Playlist()
+
+    def get_playlist_items(self):
+        return self.playlist.get_items()
 
     def get_playlist_text(self):
         lines = []
@@ -16,6 +19,23 @@ class PlaylistController:
             )
 
         return "\n".join(lines)
+
+    def get_track_details_text(self, track_number):
+        track = lib.get_item(track_number)
+        return track.detail_text() if track else "Track not found"
+
+    def get_audio_path(self, track_number):
+        return lib.get_audio_path(track_number)
+
+    def get_image_path(self, track_number):
+        return lib.get_image_path(track_number)
+
+    def register_play(self, track_number, save=True):
+        lib.increment_play_count(track_number, save=save)
+        return self.get_track_details_text(track_number)
+
+    def save_changes(self):
+        lib.save_changes()
 
     def add_track(self, track_number_text):
         track_number, error = normalise_track_number(track_number_text)
@@ -28,6 +48,7 @@ class PlaylistController:
             }
 
         track = lib.get_item(track_number)
+
         if track is None:
             return {
                 "text": self.get_playlist_text(),
@@ -35,14 +56,12 @@ class PlaylistController:
                 "ok": False
             }
 
-        if self.playlist.contains(track_number):
+        if not self.playlist.add_track(track):
             return {
                 "text": self.get_playlist_text(),
                 "status": "Track already in playlist",
                 "ok": False
             }
-
-        self.playlist.add_track(track)
 
         return {
             "text": self.get_playlist_text(),
@@ -58,14 +77,9 @@ class PlaylistController:
                 "ok": False
             }
 
-        for track in self.playlist.get_items():
-            lib.increment_play_count(track.track_number, save=False)
-
-        lib.save_changes()
-
         return {
             "text": self.get_playlist_text(),
-            "status": "Playlist played successfully",
+            "status": "Playing playlist",
             "ok": True
         }
 

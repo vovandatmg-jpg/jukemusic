@@ -3,7 +3,32 @@ import os
 from model.library_item import LibraryItem
 
 library = {}
-CSV_FILE = os.path.join(os.path.dirname(__file__), "../tracks.csv")
+BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+CSV_FILE = os.path.join(BASE_DIR, "tracks.csv")
+DEFAULT_IMAGE_FILE = os.path.join(BASE_DIR, "img", "default.png")
+
+
+def resolve_file_path(path_text):
+    if not path_text:
+        return None
+
+    if os.path.isabs(path_text):
+        full_path = path_text
+    else:
+        full_path = os.path.normpath(os.path.join(BASE_DIR, path_text))
+
+    return full_path if os.path.exists(full_path) else None
+
+
+def get_all_items():
+    return [library[key] for key in sorted(library.keys())]
+
+
+def format_items(items):
+    lines = []
+    for item in items:
+        lines.append(f"{item.track_number} {item.info()} plays:{item.play_count}")
+    return "\n".join(lines)
 
 
 def load_library():
@@ -14,16 +39,23 @@ def load_library():
             reader = csv.DictReader(file)
 
             for row in reader:
-                track_number = row["track_number"]
-                name = row["name"]
-                artist = row["artist"]
+                track_number = row["track_number"].strip().zfill(2)
+                name = row["name"].strip()
+                artist = row["artist"].strip()
                 rating = int(row["rating"])
                 play_count = int(row["play_count"])
                 image = row.get("image", "").strip()
                 audio = row.get("audio", "").strip()
 
-                item = LibraryItem(name, artist, rating, image, audio, track_number)
-                item.play_count = play_count
+                item = LibraryItem(
+                    name=name,
+                    artist=artist,
+                    rating=rating,
+                    image=image,
+                    audio=audio,
+                    track_number=track_number,
+                    play_count=play_count
+                )
                 library[track_number] = item
 
     except FileNotFoundError:
@@ -47,10 +79,9 @@ def save_library():
             "audio"
         ])
 
-        for key in sorted(library.keys()):
-            item = library[key]
+        for item in get_all_items():
             writer.writerow([
-                key,
+                item.track_number,
                 item.name,
                 item.artist,
                 item.rating,
@@ -60,18 +91,16 @@ def save_library():
             ])
 
 
+def save_changes():
+    save_library()
+
+
 def get_item(key):
     return library.get(key)
 
 
 def list_all():
-    lines = []
-
-    for key in sorted(library.keys()):
-        item = library[key]
-        lines.append(f"{key} {item.info()} plays:{item.play_count}")
-
-    return "\n".join(lines)
+    return format_items(get_all_items())
 
 
 def get_name(key):
@@ -109,10 +138,6 @@ def increment_play_count(key, save=True):
             save_library()
 
 
-def save_changes():
-    save_library()
-
-
 def get_image(key):
     item = get_item(key)
     return item.image if item else None
@@ -124,74 +149,46 @@ def get_audio(key):
 
 
 def get_image_path(key):
-    image = get_image(key)
+    image_path = resolve_file_path(get_image(key))
+    if image_path:
+        return image_path
 
-    if image:
-        if os.path.isabs(image):
-            image_path = image
-        else:
-            image_path = os.path.normpath(
-                os.path.join(os.path.dirname(__file__), image)
-            )
-
-        if os.path.exists(image_path):
-            return image_path
-
-    default_path = os.path.join(os.path.dirname(__file__), "../img", "default.png")
-    if os.path.exists(default_path):
-        return default_path
+    if os.path.exists(DEFAULT_IMAGE_FILE):
+        return DEFAULT_IMAGE_FILE
 
     return None
 
 
 def get_audio_path(key):
-    audio = get_audio(key)
-
-    if audio:
-        if os.path.isabs(audio):
-            audio_path = audio
-        else:
-            audio_path = os.path.normpath(
-                os.path.join(os.path.dirname(__file__), audio)
-            )
-
-        if os.path.exists(audio_path):
-            return audio_path
-
-    return None
+    return resolve_file_path(get_audio(key))
 
 
 def search_tracks(keyword):
     keyword = keyword.strip().lower()
 
     if keyword == "":
-        return "Please enter a search keyword"
+        return []
 
-    lines = []
-
-    for key in sorted(library.keys()):
-        item = library[key]
+    matches = []
+    for item in get_all_items():
         if keyword in item.name.lower() or keyword in item.artist.lower():
-            lines.append(f"{key} {item.info()} plays:{item.play_count}")
+            matches.append(item)
 
-    if not lines:
-        return "No matching tracks found"
-
-    return "\n".join(lines)
+    return matches
 
 
 def filter_by_artist(artist_name):
-    lines = []
+    artist_name = artist_name.strip().lower()
 
-    for key in sorted(library.keys()):
-        item = library[key]
-        if item.artist.strip().lower() == artist_name.strip().lower():
-            lines.append(f"{key} {item.info()} plays:{item.play_count}")
+    if artist_name == "":
+        return []
 
-    if not lines:
-        return "No tracks found for this artist"
+    matches = []
+    for item in get_all_items():
+        if item.artist.strip().lower() == artist_name:
+            matches.append(item)
 
-    return "\n".join(lines)
+    return matches
 
 
 def get_artists():

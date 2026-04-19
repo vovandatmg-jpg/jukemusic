@@ -1,97 +1,161 @@
 import tkinter as tk
-import os
+
+try:
+    import pygame
+except ImportError:
+    pygame = None
 
 from view import font_manager as fonts
-from controller.main_controller import MainController
+from view.gui_utils import BG, CARD, PRIMARY, TEXT, make_title
+from view.view_tracks import TrackViewer
+from view.create_track_list import CreateTrackList
+from view.update_tracks import UpdateTracks
 
-from view.gui_utils import (
-    BG, CARD,
-    SUBTEXT, make_title,
-    make_button, make_status,
-    set_status
-)
+
+TAB_BG = "#F3E3DB"
+TAB_HOVER = "#EAD7CE"
+TAB_ACTIVE = "#FFFFFF"
+TAB_BORDER = "#E1CCC1"
+
+
+def build_tab(parent, text, command):
+    tab_frame = tk.Frame(parent, bg=CARD)
+
+    button = tk.Button(
+        tab_frame,
+        text=text,
+        command=command,
+        font=("Segoe UI", 11, "bold"),
+        bg=TAB_BG,
+        fg=TEXT,
+        activebackground=TAB_HOVER,
+        activeforeground=TEXT,
+        relief="flat",
+        bd=0,
+        padx=24,
+        pady=12,
+        cursor="hand2",
+        highlightthickness=1,
+        highlightbackground=TAB_BORDER,
+        highlightcolor=TAB_BORDER
+    )
+    button.pack()
+
+    indicator = tk.Frame(tab_frame, bg=CARD, height=4)
+    indicator.pack(fill="x", pady=(6, 0))
+
+    return {
+        "frame": tab_frame,
+        "button": button,
+        "indicator": indicator
+    }
+
+
+def style_tab(tab, active=False, hover=False):
+    if active:
+        tab["button"].config(
+            bg=TAB_ACTIVE,
+            fg=TEXT,
+            activebackground=TAB_ACTIVE,
+            activeforeground=TEXT
+        )
+        tab["indicator"].config(bg=PRIMARY)
+    else:
+        bg = TAB_HOVER if hover else TAB_BG
+        tab["button"].config(
+            bg=bg,
+            fg=TEXT,
+            activebackground=TAB_HOVER,
+            activeforeground=TEXT
+        )
+        tab["indicator"].config(bg=CARD)
 
 
 def main():
     window = tk.Tk()
-
-    window.geometry("900x560")
+    window.geometry("1280x800")
+    window.minsize(1180, 760)
     window.title("JukeBox")
     window.configure(bg=BG)
 
     fonts.configure()
-
-    controller = MainController()
-
     make_title(window, "JukeBox Music Player")
 
-    sub_lbl = tk.Label(
+    nav_card = tk.Frame(
         window,
-        text="Choose an option and enjoy your music collection",
-        bg=BG,
-        fg=SUBTEXT
+        bg=CARD,
+        bd=1,
+        relief="solid"
     )
-    sub_lbl.pack(pady=(0, 18))
+    nav_card.pack(fill="x", padx=24, pady=(0, 10))
 
-    button_frame = tk.Frame(window, bg=BG)
-    button_frame.pack(pady=(0, 20))
+    tab_bar = tk.Frame(nav_card, bg=CARD)
+    tab_bar.pack(anchor="w", padx=16, pady=14)
 
-    image_frame = tk.Frame(window, bg=CARD, bd=1, relief="solid")
-    image_frame.pack(pady=(0, 14))
+    content_host = tk.Frame(window, bg=BG)
+    content_host.pack(fill="both", expand=True)
 
-    image_path = os.path.join(os.path.dirname(__file__), "..", "img", "anhnen.png")
+    pages = {
+        "view": tk.Frame(content_host, bg=BG),
+        "playlist": tk.Frame(content_host, bg=BG),
+        "update": tk.Frame(content_host, bg=BG)
+    }
 
-    if os.path.exists(image_path):
-        try:
-            bg_image = tk.PhotoImage(file=image_path)
-            bg_image = bg_image.subsample(2, 2)
+    for page in pages.values():
+        page.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-            image_lbl = tk.Label(image_frame, image=bg_image, bg=CARD, bd=0)
-            image_lbl.image = bg_image
+    track_viewer = TrackViewer(pages["view"])
+    playlist_viewer = CreateTrackList(pages["playlist"])
+    update_viewer = UpdateTracks(pages["update"])
 
-        except tk.TclError:
-            image_lbl = tk.Label(
-                image_frame,
-                text="[Image cannot be loaded]",
-                bg="white",
-                width=60,
-                height=18
-            )
-    else:
-        image_lbl = tk.Label(
-            image_frame,
-            text="[JukeBox Image Here]",
-            bg="white",
-            width=60,
-            height=18
-        )
+    tabs = {}
+    active_tab = {"name": "view"}
 
-    image_lbl.pack(padx=10, pady=10)
+    def show_tab(name):
+        active_tab["name"] = name
+        pages[name].tkraise()
 
-    status_lbl = make_status(window)
-    set_status(status_lbl, "Ready")
+        for key, tab in tabs.items():
+            style_tab(tab, active=(key == name))
 
-    make_button(
-        button_frame,
-        "View Tracks",
-        lambda: controller.open_view_tracks(window, status_lbl),
-        16
-    ).grid(row=0, column=0, padx=8)
+    tabs["view"] = build_tab(tab_bar, "View Tracks", lambda: show_tab("view"))
+    tabs["playlist"] = build_tab(tab_bar, "Create Track List", lambda: show_tab("playlist"))
+    tabs["update"] = build_tab(tab_bar, "Update Rating", lambda: show_tab("update"))
 
-    make_button(
-        button_frame,
-        "Create Track List",
-        lambda: controller.open_create_track_list(window, status_lbl),
-        16
-    ).grid(row=0, column=1, padx=8)
+    tabs["view"]["frame"].pack(side="left", padx=(0, 12))
+    tabs["playlist"]["frame"].pack(side="left", padx=(0, 12))
+    tabs["update"]["frame"].pack(side="left")
 
-    make_button(
-        button_frame,
-        "Update Tracks Rating",
-        lambda: controller.open_update_tracks(window, status_lbl),
-        18
-    ).grid(row=0, column=2, padx=8)
+    def bind_hover(tab_name):
+        button = tabs[tab_name]["button"]
 
+        def on_enter(event):
+            if active_tab["name"] != tab_name:
+                style_tab(tabs[tab_name], active=False, hover=True)
+
+        def on_leave(event):
+            if active_tab["name"] != tab_name:
+                style_tab(tabs[tab_name], active=False, hover=False)
+
+        button.bind("<Enter>", on_enter)
+        button.bind("<Leave>", on_leave)
+
+    bind_hover("view")
+    bind_hover("playlist")
+    bind_hover("update")
+
+    def on_app_close():
+        track_viewer.on_close()
+        playlist_viewer.on_close()
+
+        if pygame is not None and pygame.mixer.get_init() is not None:
+            pygame.mixer.quit()
+
+        window.destroy()
+
+    window.protocol("WM_DELETE_WINDOW", on_app_close)
+
+    show_tab("view")
     window.mainloop()
 
 
