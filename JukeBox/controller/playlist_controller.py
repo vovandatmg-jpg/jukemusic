@@ -6,6 +6,8 @@ from controller.input_validator import normalise_track_number
 class PlaylistController:
     def __init__(self):
         self.playlist = Playlist()
+        self.current_index = -1
+        self.playing = False
 
     def get_playlist_items(self):
         return self.playlist.get_items()
@@ -37,7 +39,7 @@ class PlaylistController:
     def save_changes(self):
         lib.save_changes()
 
-    def add_track(self, track_number_text):
+    def add_track_to_playlist(self, track_number_text):
         track_number, error = normalise_track_number(track_number_text)
 
         if error:
@@ -74,16 +76,54 @@ class PlaylistController:
             return {
                 "text": self.get_playlist_text(),
                 "status": "Playlist is empty",
-                "ok": False
+                "ok": False,
+                "track": None
             }
+
+        self.current_index = 0
+        self.playing = True
 
         return {
             "text": self.get_playlist_text(),
             "status": "Playing playlist",
-            "ok": True
+            "ok": True,
+            "track": self.get_current_track()
         }
 
+    def get_current_track(self):
+        items = self.playlist.get_items()
+
+        if not self.playing:
+            return None
+
+        if self.current_index < 0 or self.current_index >= len(items):
+            return None
+
+        return items[self.current_index]
+
+    def move_next_track(self):
+        if not self.playing:
+            return None
+
+        self.current_index += 1
+        items = self.playlist.get_items()
+
+        if self.current_index >= len(items):
+            self.playing = False
+            self.current_index = -1
+            return None
+
+        return items[self.current_index]
+
+    def stop_playlist(self):
+        self.playing = False
+        self.current_index = -1
+
+    def is_playing(self):
+        return self.playing
+
     def reset_playlist(self):
+        self.stop_playlist()
         self.playlist.reset()
 
         return {

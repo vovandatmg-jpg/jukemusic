@@ -27,10 +27,9 @@ class TrackController:
 
         if error:
             return {
-                "success": False,
+                "ok": False,
                 "details": error,
                 "status": "Invalid track number",
-                "ok": False,
                 "track_number": None,
                 "image_path": None
             }
@@ -39,19 +38,17 @@ class TrackController:
 
         if track is None:
             return {
-                "success": False,
+                "ok": False,
                 "details": f"Track {track_number} not found",
                 "status": "Track not found",
-                "ok": False,
                 "track_number": None,
                 "image_path": None
             }
 
         return {
-            "success": True,
+            "ok": True,
             "details": track.detail_text(),
             "status": "Track displayed successfully",
-            "ok": True,
             "track_number": track_number,
             "image_path": lib.get_image_path(track_number)
         }
@@ -99,6 +96,42 @@ class TrackController:
 
     def get_audio_path(self, track_number):
         return lib.get_audio_path(track_number)
+
+    def prepare_track_for_play(self, track_number):
+        if track_number is None:
+            return {
+                "ok": False,
+                "status": "Please view a track first",
+                "audio_path": None,
+                "track_name": None
+            }
+
+        track = lib.get_item(track_number)
+
+        if track is None:
+            return {
+                "ok": False,
+                "status": "Track not found",
+                "audio_path": None,
+                "track_name": None
+            }
+
+        audio_path = lib.get_audio_path(track_number)
+
+        if audio_path is None:
+            return {
+                "ok": False,
+                "status": "Audio file not found",
+                "audio_path": None,
+                "track_name": track.name
+            }
+
+        return {
+            "ok": True,
+            "status": "Track ready to play",
+            "audio_path": audio_path,
+            "track_name": track.name
+        }
 
     def register_play(self, track_number, save=True):
         lib.increment_play_count(track_number, save=save)

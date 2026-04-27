@@ -11,7 +11,7 @@ from view.gui_utils import (
 )
 
 
-class UpdateTracks:
+class RatingUpdateView:
     def __init__(self, window):
         self.window = window
 
@@ -67,5 +67,5 @@ class UpdateTracks:
 
 if __name__ == "__main__":
     window = tk.Tk()
-    UpdateTracks(window)
+    RatingUpdateView(window)
     window.mainloop()

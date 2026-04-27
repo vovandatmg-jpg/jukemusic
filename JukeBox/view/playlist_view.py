@@ -9,7 +9,9 @@ from view import font_manager as fonts
 from controller.playlist_controller import PlaylistController
 
 from view.gui_utils import (
-    CARD, TEXT, SECONDARY,
+    CARD, TEXT, SECONDARY, WHITE, SOFT_PANEL,
+    PLAYLIST_IMAGE_MAX_WIDTH, PLAYLIST_IMAGE_MAX_HEIGHT,
+    FONT_FAMILY,
     set_text,
     make_title, make_card, make_label, make_entry,
     make_button, make_text, make_status, set_status,
@@ -18,7 +20,7 @@ from view.gui_utils import (
 )
 
 
-class CreateTrackList:
+class PlaylistView:
     def __init__(self, window):
         self.window = window
 
@@ -26,8 +28,6 @@ class CreateTrackList:
 
         self.controller = PlaylistController()
 
-        self.current_index = -1
-        self.playing = False
         self.after_id = None
         self.audio_ready = init_audio_system(pygame)
 
@@ -90,13 +90,13 @@ class CreateTrackList:
             text="Now Playing",
             bg=CARD,
             fg=TEXT,
-            font=("Segoe UI", 15, "bold")
+            font=(FONT_FAMILY, 15, "bold")
         )
         now_title.pack(pady=(4, 14))
 
         now_card = tk.Frame(
             right_frame,
-            bg="white",
+            bg=WHITE,
             bd=1,
             relief="solid"
         )
@@ -104,7 +104,7 @@ class CreateTrackList:
 
         image_outer = tk.Frame(
             now_card,
-            bg="#FFF8F3",
+            bg=SOFT_PANEL,
             bd=1,
             relief="solid",
             width=240,
@@ -116,24 +116,24 @@ class CreateTrackList:
         self.image_lbl = tk.Label(
             image_outer,
             text="No image",
-            bg="#FFF8F3",
+            bg=SOFT_PANEL,
             fg=TEXT,
-            font=("Segoe UI", 10, "italic")
+            font=(FONT_FAMILY, 10, "italic")
         )
         self.image_lbl.pack(expand=True, fill="both")
 
         info_title = tk.Label(
             now_card,
             text="Track Information",
-            bg="white",
+            bg=WHITE,
             fg=TEXT,
-            font=("Segoe UI", 11, "bold")
+            font=(FONT_FAMILY, 11, "bold")
         )
         info_title.pack(anchor="w", padx=22, pady=(0, 8))
 
         info_frame = tk.Frame(
             now_card,
-            bg="#FFF8F3",
+            bg=SOFT_PANEL,
             bd=1,
             relief="solid"
         )
@@ -143,12 +143,12 @@ class CreateTrackList:
             info_frame,
             width=28,
             height=11,
-            bg="#FFF8F3",
+            bg=SOFT_PANEL,
             fg=TEXT,
             relief="flat",
             bd=0,
             wrap="word",
-            font=("Segoe UI", 11),
+            font=(FONT_FAMILY, 11),
             padx=12,
             pady=12
         )
@@ -162,9 +162,9 @@ class CreateTrackList:
         clear_image_label(
             self.image_lbl,
             message=message,
-            bg="#FFF8F3",
+            bg=SOFT_PANEL,
             fg=TEXT,
-            font=("Segoe UI", 10, "italic")
+            font=(FONT_FAMILY, 10, "italic")
         )
 
     def clear_track_details(self):
@@ -173,13 +173,17 @@ class CreateTrackList:
 
     def show_track_image(self, track_number):
         image_path = self.controller.get_image_path(track_number)
-        photo = load_png_image(image_path, max_width=220, max_height=220)
+        photo = load_png_image(
+            image_path,
+            max_width=PLAYLIST_IMAGE_MAX_WIDTH,
+            max_height=PLAYLIST_IMAGE_MAX_HEIGHT
+        )
 
         if photo is None:
             self.clear_image("No image available")
             return
 
-        set_image_label(self.image_lbl, photo, bg="#FFF8F3")
+        set_image_label(self.image_lbl, photo, bg=SOFT_PANEL)
 
     def show_track_details(self, track_number):
         details = self.controller.get_track_details_text(track_number)
@@ -187,7 +191,7 @@ class CreateTrackList:
         self.show_track_image(track_number)
 
     def add_track_clicked(self):
-        result = self.controller.add_track(self.track_input.get())
+        result = self.controller.add_track_to_playlist(self.track_input.get())
 
         set_text(self.list_txt, result["text"])
         set_status(self.status_lbl, result["status"], ok=result["ok"])
@@ -205,6 +209,8 @@ class CreateTrackList:
             set_status(self.status_lbl, "Audio system could not start", ok=False)
             return
 
+        self.stop_playback(save_changes=False)
+
         result = self.controller.play_playlist()
         set_text(self.list_txt, result["text"])
         set_status(self.status_lbl, result["status"], ok=result["ok"])
@@ -212,27 +218,18 @@ class CreateTrackList:
         if not result["ok"]:
             return
 
-        self.stop_playback()
-        self.current_index = 0
-        self.playing = True
-        self.play_track_at_index()
+        self.play_current_track()
 
-    def play_track_at_index(self):
-        if not self.playing:
+    def play_current_track(self):
+        if not self.controller.is_playing():
             return
 
-        items = self.controller.get_playlist_items()
+        track = self.controller.get_current_track()
 
-        if self.current_index >= len(items):
-            self.playing = False
-            self.current_index = -1
-            self.after_id = None
-            self.controller.save_changes()
-            set_text(self.list_txt, self.controller.get_playlist_text())
-            set_status(self.status_lbl, "Playlist finished", ok=True)
+        if track is None:
+            self.finish_playlist()
             return
 
-        track = items[self.current_index]
         track_number = track.track_number
         audio_path = self.controller.get_audio_path(track_number)
 
@@ -244,8 +241,8 @@ class CreateTrackList:
                 f"Audio file not found for track {track_number}, skipping",
                 ok=False
             )
-            self.current_index += 1
-            self.after_id = self.window.after(400, self.play_track_at_index)
+            self.controller.move_next_track()
+            self.after_id = self.window.after(400, self.play_current_track)
             return
 
         try:
@@ -270,24 +267,31 @@ class CreateTrackList:
                 f"Cannot play track {track_number}, skipping",
                 ok=False
             )
-            self.current_index += 1
-            self.after_id = self.window.after(400, self.play_track_at_index)
+            self.controller.move_next_track()
+            self.after_id = self.window.after(400, self.play_current_track)
 
     def check_playback(self):
-        if not self.playing:
+        if not self.controller.is_playing():
             return
 
         if pygame.mixer.music.get_busy():
             self.after_id = self.window.after(500, self.check_playback)
         else:
-            self.current_index += 1
-            self.play_track_at_index()
+            next_track = self.controller.move_next_track()
+            if next_track is None:
+                self.finish_playlist()
+            else:
+                self.play_current_track()
 
-    def stop_playback(self):
-        was_playing = self.playing or self.current_index != -1
+    def finish_playlist(self):
+        self.controller.save_changes()
+        self.controller.stop_playlist()
+        self.after_id = None
+        set_text(self.list_txt, self.controller.get_playlist_text())
+        set_status(self.status_lbl, "Playlist finished", ok=True)
 
-        self.playing = False
-        self.current_index = -1
+    def stop_playback(self, save_changes=True):
+        was_playing = self.controller.is_playing()
 
         if self.after_id is not None:
             self.window.after_cancel(self.after_id)
@@ -296,15 +300,17 @@ class CreateTrackList:
         if pygame is not None and self.audio_ready and pygame.mixer.get_init() is not None:
             pygame.mixer.music.stop()
 
-        if was_playing:
+        if was_playing and save_changes:
             self.controller.save_changes()
+
+        self.controller.stop_playlist()
 
     def stop_playlist_clicked(self):
         self.stop_playback()
         set_status(self.status_lbl, "Playback stopped", ok=True)
 
     def reset_playlist_clicked(self):
-        self.stop_playback()
+        self.stop_playback(save_changes=False)
 
         result = self.controller.reset_playlist()
         set_text(self.list_txt, result["text"])
@@ -319,5 +325,5 @@ class CreateTrackList:
 
 if __name__ == "__main__":
     window = tk.Tk()
-    CreateTrackList(window)
+    PlaylistView(window)
     window.mainloop()

@@ -5,7 +5,6 @@ from model.library_item import LibraryItem
 library = {}
 BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
 CSV_FILE = os.path.join(BASE_DIR, "tracks.csv")
-DEFAULT_IMAGE_FILE = os.path.join(BASE_DIR, "img", "default.png")
 
 
 def resolve_file_path(path_text):
@@ -118,11 +117,12 @@ def get_rating(key):
     return item.rating if item else -1
 
 
-def set_rating(key, rating):
+def set_rating(key, rating, save=True):
     item = get_item(key)
     if item:
         item.rating = rating
-        save_library()
+        if save:
+            save_library()
 
 
 def get_play_count(key):
@@ -152,12 +152,7 @@ def get_image_path(key):
     image_path = resolve_file_path(get_image(key))
     if image_path:
         return image_path
-
-    if os.path.exists(DEFAULT_IMAGE_FILE):
-        return DEFAULT_IMAGE_FILE
-
     return None
-
 
 def get_audio_path(key):
     return resolve_file_path(get_audio(key))

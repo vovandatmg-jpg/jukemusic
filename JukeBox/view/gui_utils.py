@@ -1,6 +1,8 @@
 import os
 import tkinter as tk
 
+FONT_FAMILY = "Segoe UI"
+
 BG = "#FFF4EE"
 CARD = "#FFF9F6"
 PRIMARY = "#C65D4A"
@@ -9,6 +11,18 @@ TEXT = "#4B2A26"
 SUBTEXT = "#8A5A52"
 SUCCESS = "#6E8B5B"
 ERROR = "#B14A3D"
+
+WHITE = "#FFFFFF"
+SOFT_PANEL = "#FFF8F3"
+
+DETAIL_IMAGE_MAX_WIDTH = 180
+DETAIL_IMAGE_MAX_HEIGHT = 220
+
+PLAYLIST_IMAGE_MAX_WIDTH = 220
+PLAYLIST_IMAGE_MAX_HEIGHT = 220
+
+WELCOME_IMAGE_MAX_WIDTH = 820
+WELCOME_IMAGE_MAX_HEIGHT = 620
 
 
 def set_text(text_area, content):
@@ -24,7 +38,7 @@ def make_title(parent, text):
         text=text,
         bg=BG,
         fg=TEXT,
-        font=("Segoe UI", 16, "bold")
+        font=(FONT_FAMILY, 16, "bold")
     )
     lbl.pack(pady=(18, 10))
     return lbl
@@ -62,7 +76,7 @@ def make_text(parent, width=60, height=10):
         parent,
         width=width,
         height=height,
-        bg="white",
+        bg=WHITE,
         fg=TEXT,
         relief="solid",
         bd=1,
@@ -79,7 +93,7 @@ def make_status(parent):
         text="",
         bg=BG,
         fg=SUBTEXT,
-        font=("Segoe UI", 10, "italic")
+        font=(FONT_FAMILY, 10, "italic")
     )
     lbl.pack(pady=(6, 14))
     return lbl
@@ -122,9 +136,9 @@ def load_png_image(image_path, max_width=180, max_height=220):
 def clear_image_label(
     label,
     message="No image",
-    bg="white",
+    bg=WHITE,
     fg=TEXT,
-    font=("Segoe UI", 10, "italic")
+    font=(FONT_FAMILY, 10, "italic")
 ):
     label.configure(
         text=message,
@@ -136,7 +150,7 @@ def clear_image_label(
     label.image = None
 
 
-def set_image_label(label, photo, bg="white"):
+def set_image_label(label, photo, bg=WHITE):
     label.configure(image=photo, text="", bg=bg)
     label.image = photo
 
