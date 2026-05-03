@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 
 try:
     import pygame
@@ -30,6 +31,8 @@ class PlaylistView:
 
         self.after_id = None
         self.audio_ready = init_audio_system(pygame)
+
+        self.current_track_length = 0
 
         make_title(window, "Create Track List")
 
@@ -66,11 +69,19 @@ class PlaylistView:
 
         make_button(
             button_frame,
+            "Next",
+            self.next_track_clicked,
+            10,
+            bg=SECONDARY
+        ).pack(side="left", padx=6)
+
+        make_button(
+            button_frame,
             "Stop",
             self.stop_playlist_clicked,
             12,
             bg=SECONDARY
-        ).pack(side="left", padx=8)
+        ).pack(side="left", padx=6)
 
         make_button(
             button_frame,
@@ -78,11 +89,12 @@ class PlaylistView:
             self.reset_playlist_clicked,
             16,
             bg=SECONDARY
-        ).pack(side="left", padx=8)
+        ).pack(side="left", padx=6)
 
         make_label(left_frame, "Playlist", bg=CARD).pack(anchor="w", pady=(5, 10))
 
-        self.list_txt = make_text(left_frame, 68, 16)
+        self.list_txt = make_text(left_frame, 82, 16)
+        self.list_txt.config(font=("Consolas", 10))
         self.list_txt.pack(fill="both", expand=True)
 
         now_title = tk.Label(
@@ -137,7 +149,7 @@ class PlaylistView:
             bd=1,
             relief="solid"
         )
-        info_frame.pack(fill="both", expand=True, padx=22, pady=(0, 22))
+        info_frame.pack(fill="both", expand=True, padx=22, pady=(0, 12))
 
         self.track_txt = tk.Text(
             info_frame,
@@ -154,6 +166,28 @@ class PlaylistView:
         )
         self.track_txt.pack(fill="both", expand=True)
         self.track_txt.config(state="disabled")
+
+        progress_frame = tk.Frame(now_card, bg=WHITE)
+        progress_frame.pack(fill="x", padx=22, pady=(0, 18))
+
+        self.time_lbl = tk.Label(
+            progress_frame,
+            text="0:00 / 0:00",
+            bg=WHITE,
+            fg=TEXT,
+            font=(FONT_FAMILY, 10)
+        )
+        self.time_lbl.pack(anchor="w", pady=(0, 6))
+
+        self.progress_var = tk.DoubleVar(value=0)
+
+        self.progress_bar = ttk.Progressbar(
+            progress_frame,
+            variable=self.progress_var,
+            maximum=100,
+            mode="determinate"
+        )
+        self.progress_bar.pack(fill="x")
 
         self.status_lbl = make_status(window)
         set_status(self.status_lbl, "Ready")
@@ -190,6 +224,54 @@ class PlaylistView:
         set_text(self.track_txt, details)
         self.show_track_image(track_number)
 
+    def format_time(self, seconds):
+        seconds = max(0, int(seconds))
+        minutes = seconds // 60
+        seconds = seconds % 60
+        return f"{minutes}:{seconds:02d}"
+
+    def get_audio_length(self, audio_path):
+        if pygame is None or not self.audio_ready:
+            return 0
+
+        if audio_path is None:
+            return 0
+
+        try:
+            sound = pygame.mixer.Sound(audio_path)
+            return sound.get_length()
+        except Exception:
+            return 0
+
+    def reset_progress(self):
+        self.current_track_length = 0
+        self.progress_var.set(0)
+        self.progress_bar.config(maximum=100)
+        self.time_lbl.config(text="0:00 / 0:00")
+
+    def update_progress_display(self):
+        if pygame is None or not self.audio_ready:
+            return
+
+        if self.current_track_length <= 0:
+            return
+
+        position_ms = pygame.mixer.music.get_pos()
+
+        if position_ms < 0:
+            current_seconds = 0
+        else:
+            current_seconds = position_ms / 1000
+
+        if current_seconds > self.current_track_length:
+            current_seconds = self.current_track_length
+
+        self.progress_var.set(current_seconds)
+
+        self.time_lbl.config(
+            text=f"{self.format_time(current_seconds)} / {self.format_time(self.current_track_length)}"
+        )
+
     def add_track_clicked(self):
         result = self.controller.add_track_to_playlist(self.track_input.get())
 
@@ -206,10 +288,16 @@ class PlaylistView:
 
     def play_playlist_clicked(self):
         if pygame is None or not self.audio_ready:
-            set_status(self.status_lbl, "Audio system could not start", ok=False)
+            result = self.controller.simulate_playlist_play()
+            set_text(self.list_txt, result["text"])
+            set_status(self.status_lbl, result["status"], ok=result["ok"])
             return
 
+        if pygame.mixer.get_init() is not None:
+            pygame.mixer.music.stop()
+
         self.stop_playback(save_changes=False)
+        self.reset_progress()
 
         result = self.controller.play_playlist()
         set_text(self.list_txt, result["text"])
@@ -234,6 +322,18 @@ class PlaylistView:
         audio_path = self.controller.get_audio_path(track_number)
 
         self.show_track_details(track_number)
+
+        self.current_track_length = self.get_audio_length(audio_path)
+        self.progress_var.set(0)
+
+        if self.current_track_length > 0:
+            self.progress_bar.config(maximum=self.current_track_length)
+            self.time_lbl.config(
+                text=f"0:00 / {self.format_time(self.current_track_length)}"
+            )
+        else:
+            self.progress_bar.config(maximum=100)
+            self.time_lbl.config(text="0:00 / 0:00")
 
         if audio_path is None:
             set_status(
@@ -261,7 +361,7 @@ class PlaylistView:
 
             self.check_playback()
 
-        except pygame.error:
+        except Exception:
             set_status(
                 self.status_lbl,
                 f"Cannot play track {track_number}, skipping",
@@ -271,23 +371,49 @@ class PlaylistView:
             self.after_id = self.window.after(400, self.play_current_track)
 
     def check_playback(self):
+        self.after_id = None
+
         if not self.controller.is_playing():
             return
+
+        self.update_progress_display()
 
         if pygame.mixer.music.get_busy():
             self.after_id = self.window.after(500, self.check_playback)
         else:
             next_track = self.controller.move_next_track()
+
             if next_track is None:
                 self.finish_playlist()
             else:
                 self.play_current_track()
 
+    def next_track_clicked(self):
+        if not self.controller.is_playing():
+            set_status(self.status_lbl, "Playlist is not playing", ok=False)
+            return
+
+        if self.after_id is not None:
+            self.window.after_cancel(self.after_id)
+            self.after_id = None
+
+        if pygame is not None and self.audio_ready and pygame.mixer.get_init() is not None:
+            pygame.mixer.music.stop()
+
+        next_track = self.controller.move_next_track()
+
+        if next_track is None:
+            self.finish_playlist()
+        else:
+            self.play_current_track()
+
     def finish_playlist(self):
         self.controller.save_changes()
         self.controller.stop_playlist()
         self.after_id = None
+
         set_text(self.list_txt, self.controller.get_playlist_text())
+        self.reset_progress()
         set_status(self.status_lbl, "Playlist finished", ok=True)
 
     def stop_playback(self, save_changes=True):
@@ -304,13 +430,14 @@ class PlaylistView:
             self.controller.save_changes()
 
         self.controller.stop_playlist()
+        self.reset_progress()
 
     def stop_playlist_clicked(self):
         self.stop_playback()
         set_status(self.status_lbl, "Playback stopped", ok=True)
 
     def reset_playlist_clicked(self):
-        self.stop_playback(save_changes=False)
+        self.stop_playback(save_changes=True)
 
         result = self.controller.reset_playlist()
         set_text(self.list_txt, result["text"])

@@ -106,7 +106,7 @@ def main():
 
     tabs["view"] = build_tab(tab_bar, "View Tracks", lambda: show_tab("view"))
     tabs["playlist"] = build_tab(tab_bar, "Create Track List", lambda: show_tab("playlist"))
-    tabs["update"] = build_tab(tab_bar, "Update Rating", lambda: show_tab("update"))
+    tabs["update"] = build_tab(tab_bar, "Update Tracks", lambda: show_tab("update"))
 
     tabs["view"]["frame"].pack(side="left", padx=(0, 12))
     tabs["playlist"]["frame"].pack(side="left", padx=(0, 12))

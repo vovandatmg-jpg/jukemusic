@@ -32,31 +32,28 @@ def format_items(items):
 
 def load_library():
     library.clear()
-
     try:
         with open(CSV_FILE, "r", newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file)
-
             for row in reader:
-                track_number = row["track_number"].strip().zfill(2)
-                name = row["name"].strip()
-                artist = row["artist"].strip()
-                rating = int(row["rating"])
-                play_count = int(row["play_count"])
-                image = row.get("image", "").strip()
-                audio = row.get("audio", "").strip()
+                try:
+                    track_number = row["track_number"].strip().zfill(2)
+                    name = row["name"].strip()
+                    artist = row["artist"].strip()
+                    rating = int(row["rating"])
+                    play_count = int(row["play_count"])
+                    image = row.get("image", "").strip()
+                    audio = row.get("audio", "").strip()
 
-                item = LibraryItem(
-                    name=name,
-                    artist=artist,
-                    rating=rating,
-                    image=image,
-                    audio=audio,
-                    track_number=track_number,
-                    play_count=play_count
-                )
-                library[track_number] = item
-
+                    item = LibraryItem(
+                        name=name, artist=artist, rating=rating,
+                        image=image, audio=audio,
+                        track_number=track_number, play_count=play_count
+                    )
+                    library[track_number] = item
+                except (ValueError, KeyError) as e:
+                    print(f"Skipping invalid row: {e}")
+                    continue
     except FileNotFoundError:
         print("tracks.csv not found")
     except KeyError as e:

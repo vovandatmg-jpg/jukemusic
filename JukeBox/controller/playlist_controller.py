@@ -13,11 +13,25 @@ class PlaylistController:
         return self.playlist.get_items()
 
     def get_playlist_text(self):
+        items = self.playlist.get_items()
+
+        if not items:
+            return ""
+
         lines = []
 
-        for count, track in enumerate(self.playlist.get_items(), start=1):
+        lines.append(
+            f"{'No.':<5}{'Track':<8}{'Track Name':<28}{'Artist':<24}{'Play Count':<10}"
+        )
+        lines.append("-" * 78)
+
+        for count, track in enumerate(items, start=1):
             lines.append(
-                f"{count}. {track.track_number} - {track.name} - {track.artist} - Play count: {track.play_count}"
+                f"{count:<5}"
+                f"{track.track_number:<8}"
+                f"{track.name[:27]:<28}"
+                f"{track.artist[:23]:<24}"
+                f"{track.play_count:<10}"
             )
 
         return "\n".join(lines)
@@ -88,6 +102,25 @@ class PlaylistController:
             "status": "Playing playlist",
             "ok": True,
             "track": self.get_current_track()
+        }
+
+    def simulate_playlist_play(self):
+        if self.playlist.is_empty():
+            return {
+                "text": self.get_playlist_text(),
+                "status": "Playlist is empty",
+                "ok": False
+            }
+
+        for track in self.playlist.get_items():
+            lib.increment_play_count(track.track_number, save=False)
+
+        lib.save_changes()
+
+        return {
+            "text": self.get_playlist_text(),
+            "status": "Playlist played successfully",
+            "ok": True
         }
 
     def get_current_track(self):
